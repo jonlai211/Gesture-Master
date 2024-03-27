@@ -30,7 +30,9 @@ def main():
         number, mode = select_mode(key, mode, number)
 
         image = cv.flip(image, 1)
-        image = detector.detect(image, number, mode)
+        image, landmark_list = detector.detect(image, number, mode)
+        if key == 32:  # Space key to record data
+            detector.record_data(key, number, mode, landmark_list, image)
 
         image = draw_info(image, fps, mode, number)
         cv.imshow("Hand Detection", image)
