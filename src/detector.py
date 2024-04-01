@@ -29,7 +29,7 @@ class Detector:
         self.mp_draw = mp.solutions.drawing_utils
 
         self.project_root_dir = os.path.join(os.path.dirname(__file__), '..')
-        self.record_count = {i: 0 for i in range(10)}
+        self.record_count = {i: 0 for i in range(20)}
         self.max_records = max_records
         self.mouse_control_interval = mouse_control_interval
         self.mouse_control_counter = 0
@@ -72,6 +72,16 @@ class Detector:
                 cx, cy = int(lm.x * w), int(lm.y * h)
                 position = (cx, cy)
         return position
+
+    def get_landmarks(self, image):
+        image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        self.results = self.hands.process(image_rgb)
+        landmark_list = []
+        if self.results.multi_hand_landmarks is not None:
+            for hand_landmarks, handedness in zip(self.results.multi_hand_landmarks,
+                                                  self.results.multi_handedness):
+                landmark_list = calc_landmark_list(image_rgb, hand_landmarks)
+        return landmark_list
 
     def draw_image(self, image, bounding_rect, landmark_list, handedness, gesture_name, confidence):
         image = draw_bounding_rect(bounding_rect, image, bounding_rect)
@@ -128,5 +138,7 @@ class Detector:
         return predicted_class, confidence
 
     def get_gesture_name(self, predicted_class):
-        gesture_names = {0: 'Open', 1: 'Index thumb', 2: 'Index middle', 3: 'Index middle', 4: 'Rock'}
+        gesture_names = {0: 'Open', 1: 'Fist', 2: 'Point', 3: 'Victory', 4: 'Three', 5: 'Four', 6: 'Shoot', 7: 'Likes',
+                         8: 'ThumbIndex', 9: 'IndexMiddle', 10: 'Rock', 11: 'Fuck', 12: 'Spider', 13: 'LookDown',
+                         14: 'OK', 15: 'Six'}
         return gesture_names.get(predicted_class, "No zhi")

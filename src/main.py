@@ -1,7 +1,7 @@
 import cv2 as cv
 from utils.arg_parse import get_args
 from utils.fps_calc import CvFpsCalc
-from utils.ui_tools import draw_info
+from utils.ui_tools import draw_info, draw_landmarks
 import autopy
 from detector import Detector
 
@@ -45,6 +45,7 @@ def main():
     cvFpsCalc = CvFpsCalc(buffer_len=10)
     detector = Detector()
     mouse_handler = MouseHandler()
+    space_pressed = False
 
     while cap.isOpened():
         success, image = cap.read()
@@ -55,14 +56,23 @@ def main():
         key = cv.waitKey(10)
         if key == 27:
             break
+        elif key == 32:
+            space_pressed = not space_pressed
 
         image = cv.flip(image, 1)
         image, gesture_name = detector.detect(image)
         mode = map_gesture_mode(gesture_name)
+        # mode = "record"
 
         if mode == "move":
             curr_pos = detector.find_position(image, 8)
             mouse_handler.mouse_control(curr_pos)
+        elif mode == "record":
+            landmark_list = detector.get_landmarks(image)
+            draw_landmarks(image, landmark_list)
+            if space_pressed:
+                detector.record_data(key, 15, 1, landmark_list, image)
+                space_pressed = False
 
         image = draw_info(image, fps)
         cv.imshow("Hand Detection", image)
