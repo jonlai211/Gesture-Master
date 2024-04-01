@@ -5,8 +5,7 @@ import logging
 import numpy as np
 import mediapipe as mp
 from scipy.spatial.distance import pdist, squareform
-from utils.ui_tools import calc_bounding_rect, calc_landmark_list, draw_landmarks, draw_bounding_rect, draw_info_text, \
-    calc_center
+from utils.ui_tools import calc_bounding_rect, calc_landmark_list, draw_landmarks, draw_bounding_rect, draw_info_text
 from utils.csv_tools import logging_csv
 from utils.mouse_api import MouseAPI
 from tensorflow.keras.models import load_model
@@ -18,7 +17,7 @@ class Detector:
     def __init__(self, static_image_mode=False, max_num_hands=1, min_detection_confidence=0.5,
                  min_tracking_confidence=0.5, max_records=10, mouse_control_interval=8):
         self.results = None
-        self.prev_pos = None
+        self.prev_pos = 0, 0
         self.static_image_mode = static_image_mode
         self.max_num_hands = max_num_hands
         self.min_detection_confidence = min_detection_confidence
@@ -39,35 +38,40 @@ class Detector:
 
         self.mouse = MouseAPI()
 
-    def detect(self, image, number, mode):
+    def detect(self, image):
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         self.results = self.hands.process(image_rgb)
 
-        landmark_list = []
+        # landmark_list = []
+        gesture_name = None
         if self.results.multi_hand_landmarks is not None:
             for hand_landmarks, handedness in zip(self.results.multi_hand_landmarks,
                                                   self.results.multi_handedness):
                 bounding_rect = calc_bounding_rect(image_rgb, hand_landmarks)
-                center_pos = calc_center(bounding_rect)
                 landmark_list = calc_landmark_list(image_rgb, hand_landmarks)
 
                 processed_data = self.prepare_data(landmark_list)
                 predicted_class, confidence = self.predict(processed_data)
                 gesture_name = self.get_gesture_name(predicted_class)
 
-                if self.mouse_control_counter == 0:
-                    if self.prev_pos is not None:
-                        x_offset, y_offset = self.calc_movement(self.prev_pos, center_pos)
-                        move_x, move_y = self.map_hand_display(x_offset, y_offset)
-                        self.mouse_control(predicted_class, move_x, move_y)
-                    self.prev_pos = center_pos
-                self.mouse_control_counter = (self.mouse_control_counter + 1) % self.mouse_control_interval
-
                 image_rgb = self.draw_image(image_rgb, bounding_rect, landmark_list, handedness, gesture_name,
                                             confidence)
 
-        image_bgr = cv2.cvtColor(image_rgb, cv2.COLOR_RGB2BGR)
-        return image_bgr, landmark_list
+        image = cv2.cvtColor(image_rgb, cv2.COLOR_RGB2BGR)
+        return image, gesture_name
+
+    def find_position(self, image, id):
+        image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        self.results = self.hands.process(image_rgb)
+        position = 0, 0
+        if self.results.multi_hand_landmarks is not None:
+            myHand = self.results.multi_hand_landmarks[0]
+            if id < len(myHand.landmark):
+                lm = myHand.landmark[id]
+                h, w, c = image.shape
+                cx, cy = int(lm.x * w), int(lm.y * h)
+                position = (cx, cy)
+        return position
 
     def draw_image(self, image, bounding_rect, landmark_list, handedness, gesture_name, confidence):
         image = draw_bounding_rect(bounding_rect, image, bounding_rect)
@@ -126,20 +130,3 @@ class Detector:
     def get_gesture_name(self, predicted_class):
         gesture_names = {0: 'Open', 1: 'Index thumb', 2: 'Index middle', 3: 'Index middle', 4: 'Rock'}
         return gesture_names.get(predicted_class, "No zhi")
-
-    def calc_movement(self, prev_pos, curr_pos):
-        prev_center_x, prev_center_y = prev_pos
-        curr_center_x, curr_center_y = curr_pos
-        x_offset = curr_center_x - prev_center_x
-        y_offset = curr_center_y - prev_center_y
-        return x_offset, y_offset
-
-    def map_hand_display(self, offset_x, offset_y):
-        mouse_x, mouse_y = self.mouse.getPosition()
-        move_x = mouse_x + offset_x
-        move_y = mouse_y + offset_y
-        return move_x, move_y
-
-    def mouse_control(self, predicted_class, move_x, move_y):
-        if predicted_class == 0:
-            self.mouse.smoothMoveTo(move_x, move_y)

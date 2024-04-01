@@ -2,14 +2,14 @@ import cv2 as cv
 import numpy as np
 
 
-def select_mode(key, mode, number):
-    if 48 <= key <= 57:  # 0 ~ 9
-        number = key - 48
-    if key == 110:  # n = none mode
-        mode = 0
-    if key == 107:  # k = keypoint collect mode
-        mode = 1
-    return number, mode
+# def select_mode(key, mode, number):
+#     if 48 <= key <= 57:  # 0 ~ 9
+#         number = key - 48
+#     if key == 110:  # n = none mode
+#         mode = 0
+#     if key == 107:  # k = keypoint collect mode
+#         mode = 1
+#     return number, mode
 
 
 def calc_bounding_rect(image, landmarks):
@@ -264,19 +264,19 @@ def draw_info_text(image, brect, handedness, hand_sign_text):
     return image
 
 
-def draw_info(image, fps, mode, number):
+def draw_info(image, fps):
     cv.putText(image, "FPS:" + str(fps), (10, 30), cv.FONT_HERSHEY_SIMPLEX,
                1.0, (0, 0, 0), 4, cv.LINE_AA)
     cv.putText(image, "FPS:" + str(fps), (10, 30), cv.FONT_HERSHEY_SIMPLEX,
                1.0, (255, 255, 255), 2, cv.LINE_AA)
 
-    mode_string = ['Logging Key Point', 'Logging Point History']
-    if 1 <= mode <= 2:
-        cv.putText(image, "MODE:" + mode_string[mode - 1], (10, 90),
-                   cv.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1,
-                   cv.LINE_AA)
-        if 0 <= number <= 9:
-            cv.putText(image, "NUM:" + str(number), (10, 110),
-                       cv.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1,
-                       cv.LINE_AA)
+    # mode_string = ['Logging Key Point', 'Logging Point History']
+    # if 1 <= mode <= 2:
+    #     cv.putText(image, "MODE:" + mode_string[mode - 1], (10, 90),
+    #                cv.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1,
+    #                cv.LINE_AA)
+    #     if 0 <= number <= 9:
+    #         cv.putText(image, "NUM:" + str(number), (10, 110),
+    #                    cv.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1,
+    #                    cv.LINE_AA)
     return image
