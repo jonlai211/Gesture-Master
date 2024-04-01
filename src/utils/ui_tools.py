@@ -30,6 +30,13 @@ def calc_bounding_rect(image, landmarks):
     return [x, y, x + w, y + h]
 
 
+def calc_center(rect):
+    x, y, x_end, y_end = rect
+    center_x = (x + x_end) // 2
+    center_y = (y + y_end) // 2
+    return center_x, center_y
+
+
 def calc_landmark_list(image, landmarks):
     image_width, image_height = image.shape[1], image.shape[0]
 
