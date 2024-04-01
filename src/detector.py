@@ -7,7 +7,6 @@ import mediapipe as mp
 from scipy.spatial.distance import pdist, squareform
 from utils.ui_tools import calc_bounding_rect, calc_landmark_list, draw_landmarks, draw_bounding_rect, draw_info_text
 from utils.csv_tools import logging_csv
-from utils.mouse_api import MouseAPI
 from tensorflow.keras.models import load_model
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -35,8 +34,10 @@ class Detector:
         self.mouse_control_counter = 0
 
         self.model = load_model(os.path.join(self.project_root_dir, "models", "ddnet_model.h5"))
-
-        self.mouse = MouseAPI()
+        self.last_gesture_name = None
+        self.last_confidence = 0
+        self.detect_counter = 0
+        self.detect_interval = 4
 
     def detect(self, image):
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
@@ -50,15 +51,28 @@ class Detector:
                 bounding_rect = calc_bounding_rect(image_rgb, hand_landmarks)
                 landmark_list = calc_landmark_list(image_rgb, hand_landmarks)
 
-                processed_data = self.prepare_data(landmark_list)
-                predicted_class, confidence = self.predict(processed_data)
-                gesture_name = self.get_gesture_name(predicted_class)
+                self.detect_counter += 1
+                if self.detect_counter >= self.detect_interval:
+                    self.detect_counter = 0
+                    processed_data = self.prepare_data(landmark_list)
+                    predicted_class, confidence = self.predict(processed_data)
+                    gesture_name = self.get_gesture_name(predicted_class)
+                    self.last_gesture_name = gesture_name
+                    self.last_confidence = confidence
+                else:
+                    gesture_name = self.last_gesture_name
+                    confidence = self.last_confidence
 
                 image_rgb = self.draw_image(image_rgb, bounding_rect, landmark_list, handedness, gesture_name,
                                             confidence)
 
         image = cv2.cvtColor(image_rgb, cv2.COLOR_RGB2BGR)
         return image, gesture_name
+
+    def execute_gesture_detection(self, image):
+        processed_data = self.prepare_data(self.get_landmarks(image))
+        predicted_class, confidence = self.predict(processed_data)
+        return predicted_class, confidence
 
     def find_position(self, image, id):
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
