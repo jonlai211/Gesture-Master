@@ -6,38 +6,7 @@ from utils.fps_calc import CvFpsCalc
 from utils.ui_tools import draw_info, draw_landmarks
 import autopy
 from detector import Detector
-
-
-class MouseHandler:
-    def __init__(self, frameR, wCam, hCam, wScr, hScr):
-        self.smoothening = 7
-        self.frameR = frameR
-        self.wCam = wCam
-        self.hCam = hCam
-        self.wScr = wScr
-        self.hScr = hScr
-        self.prev_pos = (0, 0)
-        self.curr_pos = (0, 0)
-        self.last_click_time = 0
-        self.click_interval = 1
-
-    def mouse_move(self, curr_pos):
-        x1 = curr_pos[0]
-        y1 = curr_pos[1]
-        # print('x1: ', x1, ';y1: ', y1)
-        x2 = np.interp(x1, (self.frameR, self.wCam - self.frameR), (0, self.wScr))
-        y2 = np.interp(y1, (self.frameR, self.hCam - self.frameR), (0, self.hScr))
-        # print(self.wCam - self.frameR)
-        # print('x2: ', x2, ';y2: ', y2)
-        clocX = self.prev_pos[0] + (x2 - self.prev_pos[0]) / self.smoothening
-        clocY = self.prev_pos[1] + (y2 - self.prev_pos[1]) / self.smoothening
-        # print('clocX: ', clocX, ';clocY: ', clocY)
-        autopy.mouse.move(clocX, clocY)
-        self.prev_pos = clocX, clocY
-        return self.prev_pos
-
-    def mouse_click(self):
-        autopy.mouse.click()
+from mode_mouse import MouseHandler, play_transition_animation
 
 
 def main():
@@ -55,8 +24,11 @@ def main():
     detector = Detector()
     mouse_handler = MouseHandler(frameR, wCam, hCam, wScr, hScr)
     space_pressed = False
+    predict_status = True
     angle = 0
     id_prev_pos = 0, 0
+
+    mode = "free"
 
     while cap.isOpened():
         success, image = cap.read()
@@ -71,8 +43,26 @@ def main():
             space_pressed = not space_pressed
 
         image = cv.flip(image, 1)
-        image, gesture_name = detector.detect(image)
-        mode, angle = map_gesture_mode(gesture_name, angle)
+        if predict_status:
+            image, gesture_name = detector.detect(image)
+            mode, angle, predict_status = mode_manager(gesture_name, angle, predict_status)
+            # predict_status = False
+        else:
+            if mode == "move":
+                lmlist, bbox = detector.get_all_position(image)
+                id_curr_pos = detector.find_id_position(image, 8, id_prev_pos)
+                id_prev_pos = id_curr_pos
+                if angle < 360:
+                    angle = play_transition_animation(image, id_curr_pos, angle)
+                elif angle == 360:
+                    if len(lmlist) != 0:
+                        fingers = detector.fingers_up(lmlist)
+                        mouse_handler.move_and_click(lmlist, fingers)
+                        if id_curr_pos:
+                            cv.circle(image, id_curr_pos, 5, (0, 0, 255), cv.FILLED)
+
+                    # mouse_handler.prev_pos = mouse_handler.mouse_move(id_curr_pos)
+                    cv.rectangle(image, (frameR, frameR), (wCam - frameR, hCam - frameR), (255, 0, 255), 2)
         # mode = "record"
 
         # if mode == "move":
@@ -95,33 +85,22 @@ def main():
         #         detector.record_data(key, 6, 1, landmark_list, image)
         #         space_pressed = False
 
-        # image = draw_info(image, fps)
+        image = draw_info(image, fps)
         cv.imshow("Gesture Master", image)
 
     cap.release()
     cv.destroyAllWindows()
 
 
-def map_gesture_mode(gesture_name, angle):
+def mode_manager(gesture_name, angle, predict_status):
     if gesture_name == "Point":
         mode = "move"
-    elif gesture_name == "Rock":
-        mode = "click"
+        predict_status = False
     else:
         mode = "free"
         angle = 0
-    return mode, angle
-
-
-def play_transition_animation(image, curr_pos, angle):
-    radius = 15
-    color = (255, 255, 255)
-    thickness = 3
-    cv.ellipse(image, (curr_pos[0], curr_pos[1]), (radius, radius), 0, 0, angle, color, thickness)
-    angle += 10
-    if angle > 360:
-        angle = 360
-    return angle
+        predict_status = True
+    return mode, angle, predict_status
 
 
 if __name__ == "__main__":

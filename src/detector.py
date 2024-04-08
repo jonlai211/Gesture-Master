@@ -77,7 +77,7 @@ class Detector:
         predicted_class, confidence = self.predict(processed_data)
         return predicted_class, confidence
 
-    def find_position(self, image, id, position):
+    def find_id_position(self, image, id, position):
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         self.results = self.hands.process(image_rgb)
         if self.results.multi_hand_landmarks is not None:
@@ -92,6 +92,50 @@ class Detector:
         #     TODO: fix losing ID leading to vibration
         return position
 
+    def get_all_position(self, img, handNo=0, draw=True):
+        xList = []
+        yList = []
+        bbox = []
+        self.lmList = []
+        if self.results.multi_hand_landmarks:
+            myHand = self.results.multi_hand_landmarks[handNo]
+            for id, lm in enumerate(myHand.landmark):
+                # print(id, lm)
+                h, w, c = img.shape
+                cx, cy = int(lm.x * w), int(lm.y * h)
+                xList.append(cx)
+                yList.append(cy)
+                # print(id, cx, cy)
+                self.lmList.append([id, cx, cy])
+
+            xmin, xmax = min(xList), max(xList)
+            ymin, ymax = min(yList), max(yList)
+            bbox = xmin, ymin, xmax, ymax
+
+        return self.lmList, bbox
+
+    def fingers_up(self, lmList):
+        fingers = []
+        tipIds = [4, 8, 12, 16, 20]
+        # Thumb
+        if lmList[tipIds[0]][1] > lmList[tipIds[0] - 1][1]:
+            fingers.append(1)
+        else:
+            fingers.append(0)
+
+        # Fingers
+        for id in range(1, 5):
+
+            if lmList[tipIds[id]][2] < lmList[tipIds[id] - 2][2]:
+                fingers.append(1)
+            else:
+                fingers.append(0)
+
+        # totalFingers = fingers.count(1)
+
+        return fingers
+
+
     def get_landmarks(self, image):
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         self.results = self.hands.process(image_rgb)
@@ -104,7 +148,7 @@ class Detector:
 
     def draw_image(self, image, bounding_rect, landmark_list, handedness, gesture_name, confidence):
         image = draw_bounding_rect(bounding_rect, image, bounding_rect)
-        # image = draw_landmarks(image, landmark_list)
+        image = draw_landmarks(image, landmark_list)
         image = draw_info_text(
             image,
             bounding_rect,
