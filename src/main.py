@@ -55,6 +55,8 @@ def main():
     detector = Detector()
     mouse_handler = MouseHandler(frameR, wCam, hCam, wScr, hScr)
     space_pressed = False
+    angle = 0
+    id_prev_pos = 0, 0
 
     while cap.isOpened():
         success, image = cap.read()
@@ -70,40 +72,56 @@ def main():
 
         image = cv.flip(image, 1)
         image, gesture_name = detector.detect(image)
-        mode = map_gesture_mode(gesture_name)
-        # mode = "move"
+        mode, angle = map_gesture_mode(gesture_name, angle)
+        # mode = "record"
 
-        if mode == "move":
-            curr_pos = detector.find_position(image, 8)
-            mouse_handler.prev_pos = mouse_handler.mouse_move(curr_pos)
-            cv.rectangle(image, (frameR, frameR), (wCam - frameR, hCam - frameR), (255, 0, 255), 2)
-        elif mode == "click":
-            current_time = time.time()
-            if current_time - mouse_handler.last_click_time >= mouse_handler.click_interval:
-                autopy.mouse.click()
-                mouse_handler.last_click_time = current_time
-        elif mode == "record":
-            landmark_list = detector.get_landmarks(image)
-            draw_landmarks(image, landmark_list)
-            if space_pressed:
-                detector.record_data(key, 15, 1, landmark_list, image)
-                space_pressed = False
+        # if mode == "move":
+        #     id_curr_pos = detector.find_position(image, 8, id_prev_pos)
+        #     id_prev_pos = id_curr_pos
+        #     if angle < 360:
+        #         angle = play_transition_animation(image, id_curr_pos, angle)
+        #     elif angle == 360:
+        #         mouse_handler.prev_pos = mouse_handler.mouse_move(id_curr_pos)
+        #         cv.rectangle(image, (frameR, frameR), (wCam - frameR, hCam - frameR), (255, 0, 255), 2)
+        # elif mode == "click":
+        #     current_time = time.time()
+        #     if current_time - mouse_handler.last_click_time >= mouse_handler.click_interval:
+        #         autopy.mouse.click()
+        #         mouse_handler.last_click_time = current_time
+        # elif mode == "record":
+        #     landmark_list = detector.get_landmarks(image)
+        #     draw_landmarks(image, landmark_list)
+        #     if space_pressed:
+        #         detector.record_data(key, 6, 1, landmark_list, image)
+        #         space_pressed = False
 
-        image = draw_info(image, fps)
-        cv.imshow("Hand Detection", image)
+        # image = draw_info(image, fps)
+        cv.imshow("Gesture Master", image)
 
     cap.release()
     cv.destroyAllWindows()
 
 
-def map_gesture_mode(gesture_name):
+def map_gesture_mode(gesture_name, angle):
     if gesture_name == "Point":
         mode = "move"
     elif gesture_name == "Rock":
         mode = "click"
     else:
         mode = "free"
-    return mode
+        angle = 0
+    return mode, angle
+
+
+def play_transition_animation(image, curr_pos, angle):
+    radius = 15
+    color = (255, 255, 255)
+    thickness = 3
+    cv.ellipse(image, (curr_pos[0], curr_pos[1]), (radius, radius), 0, 0, angle, color, thickness)
+    angle += 10
+    if angle > 360:
+        angle = 360
+    return angle
 
 
 if __name__ == "__main__":

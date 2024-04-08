@@ -37,7 +37,7 @@ class Detector:
         self.last_gesture_name = None
         self.last_confidence = 0
         self.detect_counter = 0
-        self.detect_interval = 4
+        self.detect_interval = 10
 
     def detect(self, image):
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
@@ -65,6 +65,9 @@ class Detector:
 
                 image_rgb = self.draw_image(image_rgb, bounding_rect, landmark_list, handedness, gesture_name,
                                             confidence)
+        else:
+            pass
+            # logging.info("No hand detected.")
 
         image = cv2.cvtColor(image_rgb, cv2.COLOR_RGB2BGR)
         return image, gesture_name
@@ -74,10 +77,9 @@ class Detector:
         predicted_class, confidence = self.predict(processed_data)
         return predicted_class, confidence
 
-    def find_position(self, image, id):
+    def find_position(self, image, id, position):
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         self.results = self.hands.process(image_rgb)
-        position = 0, 0
         if self.results.multi_hand_landmarks is not None:
             myHand = self.results.multi_hand_landmarks[0]
             if id < len(myHand.landmark):
@@ -85,6 +87,9 @@ class Detector:
                 h, w, c = image.shape
                 cx, cy = int(lm.x * w), int(lm.y * h)
                 position = (cx, cy)
+        else:
+            logging.info(f"No ID {str(id)} found.")
+        #     TODO: fix losing ID leading to vibration
         return position
 
     def get_landmarks(self, image):
@@ -99,7 +104,7 @@ class Detector:
 
     def draw_image(self, image, bounding_rect, landmark_list, handedness, gesture_name, confidence):
         image = draw_bounding_rect(bounding_rect, image, bounding_rect)
-        image = draw_landmarks(image, landmark_list)
+        # image = draw_landmarks(image, landmark_list)
         image = draw_info_text(
             image,
             bounding_rect,
@@ -145,7 +150,7 @@ class Detector:
         if processed_data is None:
             return None
 
-        predictions = self.model.predict(processed_data)
+        predictions = self.model.predict(processed_data, verbose=0)
         predicted_class = np.argmax(predictions, axis=1)[0]
         confidence = np.max(predictions, axis=1)[0]
 
@@ -153,6 +158,6 @@ class Detector:
 
     def get_gesture_name(self, predicted_class):
         gesture_names = {0: 'Open', 1: 'Fist', 2: 'Point', 3: 'Victory', 4: 'Three', 5: 'Four', 6: 'Shoot', 7: 'Likes',
-                         8: 'ThumbIndex', 9: 'IndexMiddle', 10: 'Rock', 11: 'Fuck', 12: 'Spider', 13: 'LookDown',
+                         8: 'Pinch', 9: 'Glory', 10: 'Rock', 11: 'Fxxk', 12: 'Spider', 13: 'LookDown',
                          14: 'OK', 15: 'Six'}
         return gesture_names.get(predicted_class, "No zhi")
