@@ -132,9 +132,8 @@ class Detector:
                 fingers.append(0)
 
         # totalFingers = fingers.count(1)
-
+        # print(fingers)
         return fingers
-
 
     def get_landmarks(self, image):
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
