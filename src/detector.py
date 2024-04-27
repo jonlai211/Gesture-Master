@@ -92,6 +92,40 @@ class Detector:
         #     TODO: fix losing ID leading to vibration
         return position
 
+    def find_fps_positions(self, image, based_id, thumb_id, index_id, based_prev_pos, thumb_prev_pos, index_prev_pos):
+        image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        self.results = self.hands.process(image_rgb)
+
+        based_curr_pos = based_prev_pos
+        thumb_curr_pos = thumb_prev_pos
+        index_curr_pos = index_prev_pos
+
+        if self.results.multi_hand_landmarks is not None:
+            myHand = self.results.multi_hand_landmarks[0]
+
+            if based_id < len(myHand.landmark):
+                lm_based = myHand.landmark[based_id]
+                h, w, c = image.shape
+                cx_based, cy_based = int(lm_based.x * w), int(lm_based.y * h)
+                based_curr_pos = (cx_based, cy_based)
+
+            if thumb_id < len(myHand.landmark):
+                lm_thumb = myHand.landmark[thumb_id]
+                h, w, c = image.shape
+                cx_thumb, cy_thumb = int(lm_thumb.x * w), int(lm_thumb.y * h)
+                thumb_curr_pos = (cx_thumb, cy_thumb)
+
+            if index_id < len(myHand.landmark):
+                lm_index = myHand.landmark[index_id]
+                h, w, c = image.shape
+                cx_index, cy_index = int(lm_index.x * w), int(lm_index.y * h)
+                index_curr_pos = (cx_index, cy_index)
+
+        else:
+            logging.info("No fps triangle detected.")
+
+        return based_curr_pos, thumb_curr_pos, index_curr_pos
+
     def get_all_position(self, img, handNo=0, draw=True):
         xList = []
         yList = []

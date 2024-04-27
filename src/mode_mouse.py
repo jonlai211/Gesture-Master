@@ -19,7 +19,7 @@ class MouseHandler:
         self.click_interval = 1
         self.toggle_down = False
 
-    def control(self, lmList, fingers, exit_mouse):
+    def mouse_control(self, lmList, fingers, exit_mouse):
         if len(lmList) != 0:
             x0, y0 = lmList[4][1:]
             x1, y1 = lmList[8][1:]
@@ -54,6 +54,17 @@ class MouseHandler:
             elif fingers[0] == 0 and fingers[1] == 1 and fingers[2] == 1 and fingers[4] == 1:
                 exit_mouse = True
         return exit_mouse, self.toggle_down
+
+    def fps_control(self, lmList, fingers, exit_fps):
+        if len(lmList) != 0:
+            x0, y0 = lmList[2][1:]
+            x1, y1 = lmList[4][1:]
+            x2, y2 = lmList[8][1:]
+            distanceX = x2 - x0
+            distanceY = y2 - y0
+            screen_width, screen_height = autopy.screen.size()
+            step = 5
+        return exit_fps
 
 
 def play_transition_animation(image, curr_pos, angle):
